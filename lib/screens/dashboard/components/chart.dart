@@ -99,7 +99,6 @@ class _ChartState extends State<Chart> {
                         height: 0.5,
                       ),
                 ),
-                Text("Users")
               ],
             ),
           ),

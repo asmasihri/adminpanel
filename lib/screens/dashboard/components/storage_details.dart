@@ -42,6 +42,7 @@ class StorageDetails extends StatefulWidget {
 
 class _StorageDetailsState extends State<StorageDetails> {
   List<Person> people = [];
+  List<Person> users = [];
   List<Person> managers = [];
   List<Person> isactiveliste = [];
   List<Person> isnotactive = [];
@@ -65,6 +66,7 @@ _timer = Timer.periodic(Duration(seconds: 3), (timer) {
 void _fetchUsersFromFirestore() async {
    managers.clear();
    people.clear();
+   users.clear() ;
     isactiveliste.clear();
     isnotactive.clear();
   try {
@@ -95,6 +97,8 @@ void _fetchUsersFromFirestore() async {
           else {
           isnotactive.add(person); // Ajouter l'utilisateur à la liste des gestionnaires
         }
+        }else{
+          users.add(person) ;
         }
        
         return person;
@@ -132,7 +136,7 @@ void _fetchUsersFromFirestore() async {
           StorageInfoCard(
             svgSrc: "assets/icons/Documents.svg",
             title: 'Total Users',
-            amountOfFiles: ' ${people.length.toString()}',
+            amountOfFiles: ' ${users.length.toString()}',
           ),
           StorageInfoCard(
             svgSrc: "assets/icons/media.svg",
@@ -141,6 +145,7 @@ void _fetchUsersFromFirestore() async {
           ),
           StorageInfoCard(
             svgSrc: "assets/icons/folder.svg",
+            
             title: "Verified Managers",
             amountOfFiles: ' ${isactiveliste.length.toString()}',
           ),

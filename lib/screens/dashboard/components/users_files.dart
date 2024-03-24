@@ -1,11 +1,18 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:parck_ease_admin_panel/List.dart';
 import 'package:parck_ease_admin_panel/Person.dart';
+import 'dart:html' as html; // Importation de la bibliothèque HTML pour Flutter web
 
 import '../../../constants.dart';
+import 'package:excel/excel.dart';
+import 'package:flutter/material.dart';
+import 'package:excel/excel.dart' as excel;
+import 'package:path_provider/path_provider.dart';
 
 class RecentFiles extends StatefulWidget {
   const RecentFiles({
@@ -28,7 +35,36 @@ class _RecentFilesState extends State<RecentFiles> {
   List<Person> isnotactive = [];
 
   String selectedType = 'All'; // Ajoutez cette variable pour stocker le type sélectionné
+  
+void exportToExcel(BuildContext context) {
+    final excelFile = excel.Excel.createExcel();
+    final sheet = excelFile['Sheet1'];
+    sheet.appendRow(['UserName', 'Email']);
 
+    for (final person in people) {
+      sheet.appendRow([person.name, person.phoneNumber]);
+    }
+
+    final excelData = excelFile.encode();
+
+    // Crée un objet blob pour le contenu du fichier Excel
+    final blob = html.Blob([excelData]);
+
+    // Crée un URL à partir du blob
+    final url = html.Url.createObjectUrlFromBlob(blob);
+
+    // Crée un élément d'ancrage invisible pour le téléchargement du fichier
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', 'people.xlsx')
+      ..click(); // Déclenche le téléchargement
+
+    // Libère l'URL et le blob pour éviter les fuites de mémoire
+    html.Url.revokeObjectUrl(url);
+  }
+  
+  
+  
+  
   @override
   void initState() {
     super.initState();
@@ -135,7 +171,7 @@ class _RecentFilesState extends State<RecentFiles> {
                     });
                   }
                 },
-                items: <String>['All', 'Users', 'Managers' , 'Managers Pending']
+                items: <String>['All', 'Users', 'Managers' , 'Managers Pending', 'Managers Active']
                     .map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
@@ -158,6 +194,14 @@ class _RecentFilesState extends State<RecentFiles> {
                   );
                 }).toList(),
               ),
+            ElevatedButton(
+  onPressed: () {
+    exportToExcel(context);
+  },
+  child: Icon(Icons.expand_circle_down_outlined ,
+  color: primaryColor, 
+  ),
+),
             ],
           ),
           SizedBox(
@@ -230,7 +274,40 @@ class _RecentFilesState extends State<RecentFiles> {
 
    
    
-    } else if(selectedType == 'Users') {
+    }else if (selectedType == 'Managers Active') {
+    rows = isactiveliste.map((Person user) {
+  return DataRow(cells: [
+    DataCell(Text(user.name)),
+    DataCell(Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(user.phoneNumber),
+          Text(
+          user.isActive? 'Active' : 'Pending' , 
+          style: TextStyle(
+            color: user.isActive? Color(0xFF26E5FF) : Color(0xFFEE2727) ,
+          ),
+
+        ) ,
+        GestureDetector(
+          onTap: (){
+                         _navigateToPersonDetailsScreen(user);
+
+          },
+          child: Icon(Icons.info,
+                   color : Color(0xFFEE2727)
+
+          ), // Ajoutez un icône ou un texte pour indiquer que c'est un détail
+        ),
+      ],
+    )),
+  ]);
+}).toList();
+
+   
+   
+    }
+     else if(selectedType == 'Users') {
         rows = users.map((Person person) {
         return DataRow(cells: [
           DataCell(Text(person.name)),
