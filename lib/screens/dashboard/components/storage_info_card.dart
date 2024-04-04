@@ -11,7 +11,8 @@ class StorageInfoCard extends StatelessWidget {
     required this.amountOfFiles,
   }) : super(key: key);
 
-  final String title, svgSrc, amountOfFiles;
+  final String title, amountOfFiles;
+  final Color svgSrc;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +30,13 @@ class StorageInfoCard extends StatelessWidget {
           SizedBox(
             height: 20,
             width: 20,
-            child: SvgPicture.asset(svgSrc),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: svgSrc,
+              
+              ),
+            ),
           ),
           Expanded(
             child: Padding(
@@ -39,9 +46,7 @@ class StorageInfoCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                  
                   ),
-                  
                 ],
               ),
             ),

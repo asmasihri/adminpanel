@@ -10,22 +10,20 @@ import 'package:parck_ease_admin_panel/screens/main/main_screen.dart';
 import 'package:parck_ease_admin_panel/screens/simple_ui.dart';
 import 'package:provider/provider.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-      await Firebase.initializeApp(
-          options: const FirebaseOptions(
-              apiKey: "AIzaSyDz7Hv7C43H21_x57g9ywv3m7inG9UJ2i8",
-              authDomain: "parking-52853.firebaseapp.com",
-              projectId: "parking-52853",
-              storageBucket: "parking-52853.appspot.com",
-              messagingSenderId: "553083218206",
-              appId: "1:553083218206:web:e86f3f66662917f91e410f",
-              measurementId: "G-Y6R8Z2CSX1"),
-        );
-          Get.put(SimpleUIController());
-        
-
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+        apiKey: "AIzaSyAWndRPLcQyvfDV8Rzgk-SgJ_dJ8dQpmbo",
+        authDomain: "park-ease-b0335.firebaseapp.com",
+        projectId: "park-ease-b0335",
+        storageBucket: "park-ease-b0335.appspot.com",
+        messagingSenderId: "529813255321",
+        appId: "1:529813255321:web:581ea032cd8eb5b85e3408",
+        measurementId: "G-TQFX11JT4E"
+        ),
+  );
+  Get.put(SimpleUIController());
 
   runApp(
     MultiProvider(
@@ -37,7 +35,6 @@ void main() async {
       child: MyApp(),
     ),
   );
-
 }
 
 class MyApp extends StatelessWidget {
@@ -62,9 +59,8 @@ class MyApp extends StatelessWidget {
       //   // child: MainScreen(),
       //   child: MainScreen(),
       // ),
-    
-    home: LoginView(),
+
+      home: LoginView(),
     );
   }
-
 }

@@ -1,5 +1,5 @@
-import 'package:admin/constants.dart';
 import 'package:flutter/material.dart';
+import 'package:parck_ease_admin_panel/constants.dart';
 
 class CloudStorageInfo {
   final String? svgSrc, title, totalStorage;

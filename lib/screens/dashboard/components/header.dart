@@ -6,11 +6,17 @@ import 'package:provider/provider.dart';
 
 import '../../../constants.dart';
 
-class Header extends StatelessWidget {
+class Header extends StatefulWidget {
+  final bool issupport ;
   const Header({
-    Key? key,
+    Key? key,  this.issupport = false,
   }) : super(key: key);
 
+  @override
+  State<Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends State<Header> {
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -22,7 +28,7 @@ class Header extends StatelessWidget {
           ),
         if (!Responsive.isMobile(context))
           Text(
-            "Dashboard",
+          widget.issupport ? 'Support Contact' :  "Dashboard",
             style: Theme.of(context).textTheme.titleLarge,
           ),
         if (!Responsive.isMobile(context))

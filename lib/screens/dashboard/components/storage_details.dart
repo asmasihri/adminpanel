@@ -8,26 +8,24 @@ import 'dart:async';
 import 'storage_info_card.dart';
 
 class Person {
-  final String name;
-  final String photoUrl;
-  final String badgePhotoUrl; // Ajout du champ pour la photo du badge
-  final String
-      nationalCardFrontUrl; // Ajout du champ pour la carte nationale recto
-  final String
-      nationalCardBackUrl; // Ajout du champ pour la carte nationale verso
   bool isActive;
   final String role;
   final String phoneNumber;
+  final String email;
+  final String userId;
+  final String nationalCardFrontUrl;
+  final String nationalCardBackUrl;
+  final String? isbloqued;
 
   Person({
+    this.isbloqued,
+    required this.email,
     required this.role,
     required this.phoneNumber,
-    required this.name,
-    required this.photoUrl,
-    required this.badgePhotoUrl,
-    required this.nationalCardFrontUrl,
-    required this.nationalCardBackUrl,
     this.isActive = false,
+    required this.userId,
+    required this.nationalCardBackUrl,
+    required this.nationalCardFrontUrl,
   });
 }
 
@@ -46,72 +44,86 @@ class _StorageDetailsState extends State<StorageDetails> {
   List<Person> managers = [];
   List<Person> isactiveliste = [];
   List<Person> isnotactive = [];
-    late Timer _timer;
-
+  List<Person> bloqued = [];
+  late Timer _timer;
 
   @override
   void initState() {
     super.initState();
-_timer = Timer.periodic(Duration(seconds: 3), (timer) {
+    _timer = Timer.periodic(Duration(seconds: 3), (timer) {
       _fetchUsersFromFirestore();
-    });  }
-     @override
+    });
+  }
+
+  @override
   void dispose() {
     // Arrête le timer lorsqu'il n'est plus nécessaire pour éviter les fuites de mémoire
     _timer.cancel();
     super.dispose();
   }
 
-
-void _fetchUsersFromFirestore() async {
-   managers.clear();
-   people.clear();
-   users.clear() ;
+  void _fetchUsersFromFirestore() async {
+    managers.clear();
+    users.clear();
     isactiveliste.clear();
+    bloqued.clear();
     isnotactive.clear();
-  try {
-    QuerySnapshot querySnapshot =
-        await FirebaseFirestore.instance.collection('users').get();
-    setState(() {
-      people = querySnapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        String role = data['rool'] ?? ''; // Récupérer le rôle de l'utilisateur
-        bool isActive = data['isActive'] ?? false; // Récupérer le rôle de l'utilisateur
-        Person person = Person(
-          name: data['name'] ?? '',
-          phoneNumber: data['phone'],
-          photoUrl: data['imageUrl'] ?? '',
-          badgePhotoUrl: data['imageUrl'] ?? '',
-          nationalCardFrontUrl: data['imageUrl'] ?? '',
-          nationalCardBackUrl: data['imageUrl'] ?? '',
-          role: role,
-          isActive: data['isActive'] ?? false,
-        );
 
-        if (role == 'Gestionnaire') {
-          managers.add(person); // Ajouter l'utilisateur à la liste des gestionnaires
-             if (isActive == true) {
-          isactiveliste.add(person); // Ajouter l'utilisateur à la liste des gestionnaires
-        }
-  
-          else {
-          isnotactive.add(person); // Ajouter l'utilisateur à la liste des gestionnaires
-        }
-        }else{
-          users.add(person) ;
-        }
-       
-        return person;
-      }).toList();
-   
-      print('people');
-      print(people);
-    });
-  } catch (error) {
-    print("Error fetching users: $error");
+    try {
+      QuerySnapshot querySnapshot =
+          await FirebaseFirestore.instance.collection('users').get();
+      setState(() {
+        people = querySnapshot.docs.map((doc) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          String role = data['rool'] ?? '';
+          String isbloqued = data['isblocked'] ?? '';
+          bool isActive = data['isActive'] ?? false;
+
+          final userId = doc.id; // Récupérer l'ID du document Firebase
+
+          Person person = Person(
+            role: role,
+            userId: userId,
+            isbloqued: isbloqued,
+            email: data['email'] ?? '',
+            phoneNumber: data['email'] ?? '',
+            isActive: isActive,
+            nationalCardFrontUrl: data['CarteRecto'] ?? '',
+            nationalCardBackUrl: data['carteverso'] ?? '',
+          );
+
+          if (role == 'Gestionnaire') {
+
+              if (isbloqued == '') {
+                 managers.add(person);
+                
+              }            if (isActive) {
+              isactiveliste.add(person);
+            } else {
+              if (isbloqued== 'bloqué') {
+                bloqued.add(person);
+                
+              } 
+              if (isbloqued == '') {
+                 isnotactive.add(person);
+                
+              }
+             
+            }
+          }
+          if (role == '') {
+            users.add(person);
+          }
+          return person;
+        }).toList();
+
+        print('people');
+        print(managers.length);
+      });
+    } catch (error) {
+      print("Error fetching users: $error");
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +136,7 @@ void _fetchUsersFromFirestore() async {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             "Details",
             style: TextStyle(
               fontSize: 18,
@@ -134,25 +146,29 @@ void _fetchUsersFromFirestore() async {
           SizedBox(height: defaultPadding),
           Chart(),
           StorageInfoCard(
-            svgSrc: "assets/icons/Documents.svg",
-            title: 'Total Users',
-            amountOfFiles: ' ${users.length.toString()}',
+            svgSrc: primaryColor.withOpacity(0.1),
+            title: 'Total ',
+            amountOfFiles: ' ${people.length.toString()}',
           ),
           StorageInfoCard(
-            svgSrc: "assets/icons/media.svg",
+            svgSrc: bgColor,
             title: "Total Managers",
             amountOfFiles: ' ${managers.length.toString()}',
           ),
           StorageInfoCard(
-            svgSrc: "assets/icons/folder.svg",
-            
+            svgSrc: Color(0xFF26E5FF),
             title: "Verified Managers",
             amountOfFiles: ' ${isactiveliste.length.toString()}',
           ),
           StorageInfoCard(
-            svgSrc: "assets/icons/unknown.svg",
+            svgSrc: Color.fromARGB(255, 176, 90, 29),
             title: "Pending Managers",
             amountOfFiles: ' ${isnotactive.length.toString()}',
+          ),
+            StorageInfoCard(
+            svgSrc: Color(0xFFEE2727),
+            title: "Bloaqued Managers",
+            amountOfFiles: ' ${bloqued.length.toString()}',
           ),
         ],
       ),

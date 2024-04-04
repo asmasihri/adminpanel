@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:parck_ease_admin_panel/screens/Login.dart';
 import 'package:parck_ease_admin_panel/screens/dashboard/dashboard_screen.dart';
+import 'package:parck_ease_admin_panel/screens/main/components/Support.dart';
+import 'package:parck_ease_admin_panel/screens/main/main_screen.dart';
 
 class SideMenu extends StatelessWidget {
+    final Function(int) onItemSelected;
+
   const SideMenu({
+        required this.onItemSelected,
+
     Key? key,
   }) : super(key: key);
 
@@ -19,22 +25,16 @@ class SideMenu extends StatelessWidget {
           DrawerListTile(
             title: "Dashboard",
             svgSrc: "assets/icons/menu_dashboard.svg",
-            press: () {
-        //               Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => DashboardScreen()),
-        // );
+                  press: () => onItemSelected(0),
 
-              
-
-            },
           ),
          
          
           DrawerListTile(
             title: "Contact",
             svgSrc: "assets/icons/menu_task.svg",
-            press: () {},
+                   press: () => onItemSelected(1),
+
           ),
           DrawerListTile(
             title: "Logout",

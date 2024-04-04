@@ -6,13 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:parck_ease_admin_panel/List.dart';
 import 'package:parck_ease_admin_panel/Person.dart';
-import 'dart:html' as html; // Importation de la bibliothèque HTML pour Flutter web
+import 'dart:html'
+    as html; // Importation de la bibliothèque HTML pour Flutter web
 
 import '../../../constants.dart';
-import 'package:excel/excel.dart';
-import 'package:flutter/material.dart';
 import 'package:excel/excel.dart' as excel;
-import 'package:path_provider/path_provider.dart';
 
 class RecentFiles extends StatefulWidget {
   const RecentFiles({
@@ -22,29 +20,65 @@ class RecentFiles extends StatefulWidget {
   @override
   State<RecentFiles> createState() => _RecentFilesState();
 }
+
 class _RecentFilesState extends State<RecentFiles> {
   List<Person> people = [];
+  List<Person> blocked = [];
   String _sortBy = 'Email';
   String _sortByusers = 'All';
   bool _isphone = false;
-  
 
   List<Person> managers = [];
   List<Person> users = [];
   List<Person> isactiveliste = [];
   List<Person> isnotactive = [];
 
-  String selectedType = 'All'; // Ajoutez cette variable pour stocker le type sélectionné
-  
-void exportToExcel(BuildContext context) {
-    final excelFile = excel.Excel.createExcel();
-    final sheet = excelFile['Sheet1'];
-    sheet.appendRow(['UserName', 'Email']);
+  String selectedType =
+      'All'; // Ajoutez cette variable pour stocker le type sélectionné
+  bool getIsActiveByEmail(String email, List<Person> people) {
+    for (Person person in people) {
+      if (person.email == email) {
+        return person.isActive;
+      }
+    }
+    return false; // Retourne false si l'email n'est pas trouvé
+  }
+  String formatDate(DateTime lastConnection) {
+      final now = DateTime.now();
+      final difference = now.difference(lastConnection);
 
-    for (final person in people) {
-      sheet.appendRow([person.name, person.phoneNumber]);
+      final days = difference.inDays;
+      final hours = difference.inHours.remainder(24);
+
+      return '$days jours, $hours heures';
     }
 
+  bool getIsActiveByPhoneNumber(String phoneNumber, List<Person> people) {
+    for (Person person in people) {
+      if (person.phoneNumber == phoneNumber) {
+        return person.isActive;
+      }
+    }
+    return false; // Retourne false si le numéro de téléphone n'est pas trouvé
+  }
+
+  void exportToExcel(BuildContext context) {
+    final excelFile = excel.Excel.createExcel();
+
+    final sheet = excelFile['Sheet1'];
+    sheet.appendRow(['UserName', 'Contact', 'Status', 'Last Connection']);
+
+    for (final person in managers) {
+          final lastConnection = person.lastConnection?.toDate(); // Convertir Timestamp en DateTime
+
+      sheet.appendRow([
+        person.name_gest,
+        person.phoneNumber.isEmpty ? person.email : person.phoneNumber,
+        person.isActive ? 'Active' : 'Pending',
+      lastConnection != null ? formatDate(lastConnection) : 'N/A', // Vérifier si lastConnection est null
+      ]);
+    }
+  
     final excelData = excelFile.encode();
 
     // Crée un objet blob pour le contenu du fichier Excel
@@ -54,17 +88,15 @@ void exportToExcel(BuildContext context) {
     final url = html.Url.createObjectUrlFromBlob(blob);
 
     // Crée un élément d'ancrage invisible pour le téléchargement du fichier
+
     final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', 'people.xlsx')
+      ..setAttribute('download', 'parckease.xlsx')
       ..click(); // Déclenche le téléchargement
 
     // Libère l'URL et le blob pour éviter les fuites de mémoire
     html.Url.revokeObjectUrl(url);
   }
-  
-  
-  
-  
+
   @override
   void initState() {
     super.initState();
@@ -72,11 +104,12 @@ void exportToExcel(BuildContext context) {
   }
 
   void _fetchUsersFromFirestore() async {
-     managers.clear();
+    managers.clear();
     users.clear();
     isactiveliste.clear();
     isnotactive.clear();
-    
+    blocked.clear() ; 
+
     try {
       QuerySnapshot querySnapshot =
           await FirebaseFirestore.instance.collection('users').get();
@@ -85,36 +118,49 @@ void exportToExcel(BuildContext context) {
           Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
           String role = data['rool'] ?? '';
           bool isActive = data['isActive'] ?? false;
-            final userId = doc.id; // Récupérer l'ID du document Firebase
+          String isblocked = data['isblocked'] ?? '';
+          final userId = doc.id; // Récupérer l'ID du document Firebase
 
           Person person = Person(
-
-            userId: userId,
-            
-            name: data['name'] ?? '',
-            phoneNumber: data['phone'],
-            photoUrl: data['BadgeImage'] ?? '',
-            badgePhotoUrl: data['BadgeImage'] ?? '',
-
-            nationalCardFrontUrl: data['CarteRecto'] ?? '',
-            nationalCardBackUrl: data['CarteVerso'] ?? '',
-            isActive: isActive,
-             pickpark:  data['picpark'] ?? '', 
-             adress: data['adress'] ?? '',
-             nameparking: data['name_parking'] ?? ''
-               );
+              userId: userId,
+              isblocked: isblocked,
+              lastConnection: data['last_connection'],
+              name_gest: data['name_gest'] ?? '',
+              name_user: data['name_user'] ?? '',
+              phoneNumber: data['phone'] ?? '',
+              email: data['email'] ?? '',
+              photoUrl: data['BadgeImage'] ?? '',
+              badgePhotoUrl: data['BadgeImage'] ?? '',
+              nationalCardFrontUrl: data['carteverso'] ?? '',
+              nationalCardBackUrl: data['carterecto'] ?? '',
+              isActive: isActive,
+              pickpark: data['picpark'] ?? '',
+              adress: data['adress'] ?? '',
+              nombretotale: data['nombre_totale'] ?? '',
+              nombrevide: data['nombre_vide'] ?? '',
+              nameparking: data['name_parking'] ?? '' );
 
           if (role == 'Gestionnaire') {
-            managers.add(person);
-            if (isActive) {
+
+              if (isblocked == '') {
+                 managers.add(person);
+                
+              }            if (isActive) {
               isactiveliste.add(person);
             } else {
-              isnotactive.add(person);
+              if (isblocked== 'bloqué') {
+                blocked.add(person);
+                
+              } 
+              if (isblocked == '') {
+                 isnotactive.add(person);
+                
+              }
+             
             }
           }
           if (role == '') {
             users.add(person);
-            
           }
           return person;
         }).toList();
@@ -122,7 +168,6 @@ void exportToExcel(BuildContext context) {
         print('people');
         print(managers.length);
       });
-    
     } catch (error) {
       print("Error fetching users: $error");
     }
@@ -133,19 +178,18 @@ void exportToExcel(BuildContext context) {
       _sortBy = newValue;
     });
   }
-  void _navigateToPersonDetailsScreen(Person user) async {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => PersonDetailsScreen(person: user),
-    ),
-  );
-  if (result != null && result == true) {
-     _fetchUsersFromFirestore();
-    
-  }
-}
 
+  void _navigateToPersonDetailsScreen(Person user) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PersonDetailsScreen(person: user),
+      ),
+    );
+    if (result != null && result == true) {
+      _fetchUsersFromFirestore();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,47 +205,59 @@ void exportToExcel(BuildContext context) {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              DropdownButton<String>(
-                value: _sortByusers,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _sortByusers = newValue;
-                      selectedType = newValue; // Mettez à jour le type sélectionné
-                    });
-                  }
-                },
-                items: <String>['All', 'Users', 'Managers' , 'Managers Pending', 'Managers Active']
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
+              Material(
+                child: DropdownButton<String>(
+                  value: _sortByusers,
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _sortByusers = newValue;
+                        selectedType =
+                            newValue; // Mettez à jour le type sélectionné
+                      });
+                    }
+                  },
+                  items: <String>[
+                    'All',
+                    'Users',
+                    'Managers',
+                    'Managers Pending',
+                    'Managers Active', 
+                    'Blocked'
+                  ].map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
               ),
-              DropdownButton<String>(
-                value: _sortBy,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    _sortList(newValue);
-                  }
-                },
-                items: <String>['Email', 'Phone Number']
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
+              Material(
+                child: DropdownButton<String>(
+                  value: _sortBy,
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      _sortList(newValue);
+                    }
+                  },
+                  items: <String>['Email', 'Phone Number', 'Email/PhoneNumber']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
               ),
-            ElevatedButton(
-  onPressed: () {
-    exportToExcel(context);
-  },
-  child: Icon(Icons.expand_circle_down_outlined ,
-  color: primaryColor, 
-  ),
-),
+              ElevatedButton(
+                onPressed: () {
+                  exportToExcel(context);
+                },
+                child: Icon(
+                  Icons.expand_circle_down_outlined,
+                  color: Color(0xFFEE2727),
+                ),
+              ),
             ],
           ),
           SizedBox(
@@ -217,136 +273,198 @@ void exportToExcel(BuildContext context) {
                     _isphone ? "Phonenumber" : "Email",
                   ),
                 ),
-                
-                
-                
               ],
               rows: _buildDataRows(),
             ),
           ),
-       
         ],
       ),
     );
   }
 
+  String getDisplayText(Person person) {
+    if (_sortBy == 'Phone Number') {
+      return person.phoneNumber;
+    } else if (_sortBy == 'Email') {
+      return person.email;
+    } else {
+      return person.phoneNumber.isNotEmpty ? person.phoneNumber : person.email;
+    }
+  }
+
+  String getName(Person person) {
+    if (person.name_gest.isEmpty) {
+      return person.name_user;
+    }
+    return person.name_gest;
+  }
+
+  List<Person> filterUsersByEmailOrPhoneNumber(List<Person> users) {
+    return users.where((user) {
+      if (_sortBy == 'Phone Number') {
+        return user.phoneNumber.isNotEmpty;
+      } else if (_sortBy == 'Email') {
+        return user.email.isNotEmpty;
+      } else {
+        // 'Phone Number/Email'
+        return user.phoneNumber.isNotEmpty || user.email.isNotEmpty;
+      }
+    }).toList();
+  }
+
   List<DataRow> _buildDataRows() {
+    List<Person> filteredUsers = filterUsersByEmailOrPhoneNumber(people);
+
     List<DataRow> rows = [];
     if (selectedType == 'All') {
-      rows = people.map((Person person) {
+      rows = filteredUsers.map((Person person) {
         return DataRow(cells: [
-          DataCell(Text(person.name)),
-          DataCell(
-            Text(
-              person.phoneNumber
-              )),
+          DataCell(Text(getName(person))),
+          DataCell(Text(
+            getDisplayText(person),
+          )),
         ]);
       }).toList();
     } else if (selectedType == 'Managers') {
-    rows = managers.map((Person user) {
-  return DataRow(cells: [
-    DataCell(Text(user.name)),
-    DataCell(Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(user.phoneNumber),
-          Text(
-          user.isActive? 'Active' : 'Pending' , 
-          style: TextStyle(
-            color: user.isActive? Color(0xFF26E5FF) : Color(0xFFEE2727) ,
-          ),
+      List<Person> filteredUsers = filterUsersByEmailOrPhoneNumber(managers);
 
-        ) ,
-        GestureDetector(
-          onTap: (){
-                         _navigateToPersonDetailsScreen(user);
-
-          },
-          child: Icon(Icons.info,
-                   color : Color(0xFFEE2727)
-
-          ), // Ajoutez un icône ou un texte pour indiquer que c'est un détail
-        ),
-      ],
-    )),
-  ]);
-}).toList();
-
-   
-   
-    }else if (selectedType == 'Managers Active') {
-    rows = isactiveliste.map((Person user) {
-  return DataRow(cells: [
-    DataCell(Text(user.name)),
-    DataCell(Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(user.phoneNumber),
-          Text(
-          user.isActive? 'Active' : 'Pending' , 
-          style: TextStyle(
-            color: user.isActive? Color(0xFF26E5FF) : Color(0xFFEE2727) ,
-          ),
-
-        ) ,
-        GestureDetector(
-          onTap: (){
-                         _navigateToPersonDetailsScreen(user);
-
-          },
-          child: Icon(Icons.info,
-                   color : Color(0xFFEE2727)
-
-          ), // Ajoutez un icône ou un texte pour indiquer que c'est un détail
-        ),
-      ],
-    )),
-  ]);
-}).toList();
-
-   
-   
-    }
-     else if(selectedType == 'Users') {
-        rows = users.map((Person person) {
+      rows = filteredUsers.map((Person user) {
         return DataRow(cells: [
-          DataCell(Text(person.name)),
-          DataCell(Text(person.phoneNumber)),
+          DataCell(Text(getName(user))),
+          DataCell(Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(getDisplayText(user)),
+              Spacer(),
+              Container(
+                child: Row(
+                  children: [
+                    Text(
+                      user.isActive ? 'Active' : 'Pending',
+                      style: TextStyle(
+                        color: user.isActive
+                            ? Color(0xFF26E5FF)
+                            : Color(0xFFEE2727),
+                      ),
+                    ),
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.001,
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        _navigateToPersonDetailsScreen(user);
+                      },
+                      child: Icon(Icons.info,
+                          color: Color(
+                              0xFFEE2727)), // Ajoutez un icône ou un texte pour indiquer que c'est un détail
+                    ),
+                  ],
+                ),
+              )
+            ],
+          )),
         ]);
-      }
-      
-      ).toList();
-      } else{
+      }).toList();
+    } else if (selectedType == 'Blocked') {
+      List<Person> filteredUsers = filterUsersByEmailOrPhoneNumber(blocked);
 
-         rows = isnotactive.map((Person user) {
-  return DataRow(cells: [
-    DataCell(Text(user.name)),
-    DataCell(Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(user.phoneNumber),
-        Text(
-          user.isActive? 'Active' : 'Pending' , 
+      rows = filteredUsers.map((Person user) {
+        return DataRow(cells: [
+          DataCell(Text(getName(user))),
+          DataCell(Text(getDisplayText(user))),
+        ]);
+      }).toList();
+    }else if (selectedType == 'Managers Active') {
+      List<Person> filteredUsers =
+          filterUsersByEmailOrPhoneNumber(isactiveliste);
 
-        ) ,
-        GestureDetector(
-          onTap: (){
-           
-                _navigateToPersonDetailsScreen(user);
+      rows = filteredUsers.map((Person user) {
+        return DataRow(cells: [
+          DataCell(Text(getName(user))),
+          DataCell(Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(getDisplayText(user)),
+              Spacer(),
+              Container(
+                child: Row(
+                  children: [
+                    Text(
+                      user.isActive ? 'Active' : 'Pending',
+                      style: TextStyle(
+                        color: user.isActive
+                            ? Color(0xFF26E5FF)
+                            : Color(0xFFEE2727),
+                      ),
+                    ),
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.001,
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        _navigateToPersonDetailsScreen(user);
+                      },
+                      child: Icon(Icons.info,
+                          color: Color(
+                              0xFFEE2727)), // Ajoutez un icône ou un texte pour indiquer que c'est un détail
+                    ),
+                  ],
+                ),
+              )
+            ],
+          )),
+        ]);
+      }).toList();
+    } else if (selectedType == 'Users') {
+      List<Person> filteredUsers = filterUsersByEmailOrPhoneNumber(users);
 
-          },
-          child: Icon(Icons.info , 
-         color : Color(0xFFEE2727)
-          ), // Ajoutez un icône ou un texte pour indiquer que c'est un détail
-        ),
-      ],
-    )),
-  ]);
-}).toList();
+      rows = filteredUsers.map((Person person) {
+        return DataRow(cells: [
+          DataCell(Text(getName(person))),
+          DataCell(Text(getDisplayText(person))),
+        ]);
+      }).toList();
+    } else {
+      List<Person> filteredUsers = filterUsersByEmailOrPhoneNumber(isnotactive);
 
-   
-
-      }
+      rows = filteredUsers.map((Person user) {
+        return DataRow(cells: [
+          DataCell(Text(getName(user))),
+          DataCell(Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(getDisplayText(user)),
+              Spacer(),
+              Container(
+                child: Row(
+                  children: [
+                    Text(
+                      user.isActive ? 'Active' : 'Pending',
+                      style: TextStyle(
+                        color: user.isActive
+                            ? Color(0xFF26E5FF)
+                            : Color(0xFFEE2727),
+                      ),
+                    ),
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.001,
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        _navigateToPersonDetailsScreen(user);
+                      },
+                      child: Icon(Icons.info,
+                          color: Color(
+                              0xFFEE2727)), // Ajoutez un icône ou un texte pour indiquer que c'est un détail
+                    ),
+                  ],
+                ),
+              )
+            ],
+          )),
+        ]);
+      }).toList();
+    }
 
     return rows;
   }
